@@ -1,0 +1,39 @@
+# Node
+node_modules/
+package-lock.json
+npm-debug.log*
+.yarn-integrity
+.pnpm-debug.log
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.*
+
+# Docker
+db-data/
+docker-compose.override.yml
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Misc
+coverage/
+.cache/
+
