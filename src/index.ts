@@ -9,18 +9,13 @@ app.use(express.json());
 
 export interface Job {
   jobId: string;
+  jobStatus: string;
   jobType: string;
   jobData: string;
   jobPriority: number;
 }
 
 const queue: Job[] = [];
-
-app.get("/health", (_req, res) => res.json({ status: "ok" }));
-
-app.get("/", (_req, res) => {
-  res.send("Hello from server");
-});
 
 app.post("/jobs", (req: Request, res: Response) => {
   try {
@@ -39,6 +34,7 @@ app.post("/jobs", (req: Request, res: Response) => {
 
     let job: Job = {
       jobId: id,
+      jobStatus: "waiting",
       jobType: type,
       jobData: data,
       jobPriority: defaultPriority,
@@ -47,6 +43,23 @@ app.post("/jobs", (req: Request, res: Response) => {
     queue.push(job);
 
     console.log(queue);
+  } catch (err) {
+    console.log("error", err);
+    return res.json({ message: (err as Error).message });
+  }
+});
+
+app.get("/jobs/:id", (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    let job: Job;
+
+    for (let i = 0; i < queue.length; i++) {
+      if (queue[i].jobId === id) {
+        job = queue[i];
+        return res.json(job);
+      }
+    }
   } catch (err) {
     console.log("error", err);
     return res.json({ message: (err as Error).message });
