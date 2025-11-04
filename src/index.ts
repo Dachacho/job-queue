@@ -21,8 +21,7 @@ async function runJob() {
   return new Promise((resolve, reject) => {
     const worker = new Worker(path.resolve(__dirname, "worker.ts"), {
       workerData: {
-        id: jobQueue.pop()?.jobId,
-        queue: jobQueue,
+        job: jobQueue.pop(),
       },
     });
 
@@ -36,9 +35,12 @@ async function runJob() {
 }
 
 setInterval(() => {
-  (async () => {
-    await runJob();
-  })();
+  console.log("queue state: ", jobQueue.length);
+  if (jobQueue.length > 0) {
+    (async () => {
+      await runJob();
+    })();
+  }
 }, 2000);
 
 app.post("/jobs", (req: Request, res: Response) => {
@@ -66,7 +68,7 @@ app.post("/jobs", (req: Request, res: Response) => {
 
     jobQueue.push(job);
 
-    console.log(jobQueue);
+    // console.log(jobQueue);
     return res.status(201).json({ jobId: id, message: "Job added" });
   } catch (err) {
     console.log("error", err);
