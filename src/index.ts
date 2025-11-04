@@ -1,6 +1,8 @@
 import express from "express";
 import { Request, Response } from "express";
 import { randomUUID } from "crypto";
+import { Worker } from "worker_threads";
+import path from "path";
 
 const app = express();
 const port = 3000;
@@ -15,7 +17,25 @@ export interface Job {
   jobPriority: number;
 }
 
-const queue: Job[] = [];
+const jobQueue: Job[] = [];
+
+async function runJob() {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(path.resolve(__dirname, "worker.ts"), {
+      workerData: {
+        id: Math.floor(Math.random() * jobQueue.length),
+        queue: jobQueue,
+      },
+    });
+
+    worker.on("message", resolve);
+    worker.on("error", reject);
+    worker.on("exit", (code) => {
+      if (code !== 0)
+        reject(new Error(`Worker stopped with exit code ${code}`));
+    });
+  });
+}
 
 app.post("/jobs", (req: Request, res: Response) => {
   try {
@@ -40,9 +60,9 @@ app.post("/jobs", (req: Request, res: Response) => {
       jobPriority: defaultPriority,
     };
 
-    queue.push(job);
+    jobQueue.push(job);
 
-    console.log(queue);
+    console.log(jobQueue);
   } catch (err) {
     console.log("error", err);
     return res.json({ message: (err as Error).message });
@@ -54,9 +74,9 @@ app.get("/jobs/:id", (req: Request, res: Response) => {
     const { id } = req.params;
     let job: Job;
 
-    for (let i = 0; i < queue.length; i++) {
-      if (queue[i].jobId === id) {
-        job = queue[i];
+    for (let i = 0; i < jobQueue.length; i++) {
+      if (jobQueue[i].jobId === id) {
+        job = jobQueue[i];
         return res.json(job);
       }
     }
