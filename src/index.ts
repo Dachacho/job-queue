@@ -64,6 +64,7 @@ app.post("/jobs", (req: Request, res: Response) => {
       jobType: type,
       jobData: data,
       jobPriority: defaultPriority,
+      createdAt: Date.now(),
     };
 
     jobQueue.push(job);
@@ -84,7 +85,7 @@ app.get("/jobs/:id", (req: Request, res: Response) => {
     for (let i = 0; i < jobQueue.length; i++) {
       if (jobQueue[i].jobId === id) {
         job = jobQueue[i];
-        return res.json(job);
+        return res.json(job.jobStatus);
       }
     }
   } catch (err) {

@@ -4,4 +4,5 @@ export interface Job {
   jobType: string;
   jobData: string;
   jobPriority: number;
+  createdAt: number;
 }
