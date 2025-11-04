@@ -1,16 +1,16 @@
 {
+  "include": ["src"],
+  "exclude": ["node_modules", "build", "dist", "**/*.test.ts"],
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "CommonJS",
-    "moduleResolution": "node",
-    "outDir": "dist",
-    "rootDir": "src",
+    "incremental": true,
+    "noEmit": true,
+    "module": "ESNext",
     "strict": true,
+    "lib": ["esnext"],
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "resolveJsonModule": true,
-    "sourceMap": true
-  },
-  "include": ["src"]
+    "allowImportingTsExtensions": true,
+    "moduleResolution": "bundler",
+    "types": ["node"]
+  }
 }

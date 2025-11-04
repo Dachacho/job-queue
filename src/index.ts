@@ -1,21 +1,19 @@
 import express from "express";
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 import { randomUUID } from "crypto";
 import { Worker } from "worker_threads";
+import type { Job } from "./types";
+//THIS 2 ARE DUMB IMPORTS CAUSE FUCK TS AND NODE
+import { fileURLToPath } from "url";
 import path from "path";
+//THIS 2 IS A SHIT LINE BECAUSE FUCK TS AND NODE
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = 3000;
 
 app.use(express.json());
-
-export interface Job {
-  jobId: string;
-  jobStatus: string;
-  jobType: string;
-  jobData: string;
-  jobPriority: number;
-}
 
 const jobQueue: Job[] = [];
 
@@ -23,7 +21,7 @@ async function runJob() {
   return new Promise((resolve, reject) => {
     const worker = new Worker(path.resolve(__dirname, "worker.ts"), {
       workerData: {
-        id: Math.floor(Math.random() * jobQueue.length),
+        id: jobQueue.pop()?.jobId,
         queue: jobQueue,
       },
     });
@@ -36,6 +34,12 @@ async function runJob() {
     });
   });
 }
+
+setInterval(() => {
+  (async () => {
+    await runJob();
+  })();
+}, 2000);
 
 app.post("/jobs", (req: Request, res: Response) => {
   try {
@@ -63,6 +67,7 @@ app.post("/jobs", (req: Request, res: Response) => {
     jobQueue.push(job);
 
     console.log(jobQueue);
+    return res.status(201).json({ jobId: id, message: "Job added" });
   } catch (err) {
     console.log("error", err);
     return res.json({ message: (err as Error).message });

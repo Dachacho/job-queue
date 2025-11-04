@@ -1,9 +1,14 @@
 import { parentPort, workerData } from "worker_threads";
-import { Job } from ".";
+import type { Job } from "./types";
 
 function doJob(id: string, arr: Job[]): void {
-  const job = findJob(id, arr);
   let message = "";
+
+  if (!id || !arr) {
+    message = "no id or arr";
+  }
+
+  const job = findJob(id, arr);
 
   if (job === null) {
     message = "couldn't find a job";
@@ -14,7 +19,7 @@ function doJob(id: string, arr: Job[]): void {
 
   setTimeout(() => {
     console.log("processing job");
-  }, 1000);
+  }, 3000);
 
   job.jobStatus = "done";
   message = "job well done";
