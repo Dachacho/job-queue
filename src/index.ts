@@ -17,7 +17,7 @@ app.use(express.json());
 
 const jobQueue: Job[] = [];
 
-async function runJob() {
+async function runWorker() {
   return new Promise((resolve, reject) => {
     const worker = new Worker(path.resolve(__dirname, "worker.ts"), {
       workerData: {
@@ -30,6 +30,9 @@ async function runJob() {
     worker.on("exit", (code) => {
       if (code !== 0)
         reject(new Error(`Worker stopped with exit code ${code}`));
+      console.log(
+        `[${new Date().toISOString()}] Worker exited with code ${code}`
+      );
     });
   });
 }
@@ -37,40 +40,48 @@ async function runJob() {
 setInterval(() => {
   console.log("queue state: ", jobQueue.length);
   if (jobQueue.length > 0) {
-    (async () => {
-      await runJob();
-    })();
+    for (let i = 0; i < 5; i++) {
+      (async () => {
+        await runWorker();
+      })();
+    }
   }
 }, 2000);
 
 app.post("/jobs", (req: Request, res: Response) => {
   try {
-    const { type, data, priority } = req.body;
-    let defaultPriority = -1;
+    const jobs = Array.isArray(req.body) ? req.body : [req.body];
+    const addedJobs: string[] = [];
 
-    if (!type || !data) {
-      return res.status(400).json({ message: "fields mising" });
+    for (const jobData of jobs) {
+      const { type, data, priority } = jobData;
+      let defaultPriority = -1;
+
+      if (!type || !data) {
+        return res.status(400).json({ message: "fields mising" });
+      }
+
+      if (priority) {
+        defaultPriority = priority;
+      }
+
+      const id = randomUUID();
+
+      let job: Job = {
+        jobId: id,
+        jobStatus: "waiting",
+        jobType: type,
+        jobData: data,
+        jobPriority: defaultPriority,
+        createdAt: Date.now(),
+      };
+
+      jobQueue.push(job);
+      addedJobs.push(id);
     }
-
-    if (priority) {
-      defaultPriority = priority;
-    }
-
-    const id = randomUUID();
-
-    let job: Job = {
-      jobId: id,
-      jobStatus: "waiting",
-      jobType: type,
-      jobData: data,
-      jobPriority: defaultPriority,
-      createdAt: Date.now(),
-    };
-
-    jobQueue.push(job);
 
     // console.log(jobQueue);
-    return res.status(201).json({ jobId: id, message: "Job added" });
+    return res.status(201).json({ jobIds: addedJobs, message: "Jobs added" });
   } catch (err) {
     console.log("error", err);
     return res.json({ message: (err as Error).message });

@@ -1,30 +1,31 @@
-import { parentPort, workerData } from "worker_threads";
+import { parentPort, workerData, threadId } from "worker_threads";
 import type { Job } from "./types";
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+function logEvent(event: string, jobId?: string) {
+  const time = new Date().toISOString();
+  console.log(
+    `[${time}] [Thread ${threadId}] [Job ${jobId ?? "none"}] ${event}`
+  );
+}
+
 async function doJob(job: Job): Promise<string> {
-  console.log(`job: ${job}`);
-  let message = "";
+  logEvent(`job recieved: ${job.jobId}`);
 
   if (!job) {
-    message = "couldn't find a job";
-    console.log("message from if: ", message);
-    return message;
+    logEvent("no job found");
+    return "couldn't find a job";
   }
 
   job.jobStatus = "processing";
-  console.log("job status: ", job.jobStatus);
+  logEvent("job status: processing", job.jobId);
 
-  await delay(3000);
+  await delay(Math.random() * 20000);
 
   job.jobStatus = "done";
-  console.log("job status: ", job.jobStatus);
-  message = "job well done";
-
-  console.log("message: ", message);
-
-  return message;
+  logEvent("job status: done", job.jobId);
+  return "job well done";
 }
 
 (async () => {
