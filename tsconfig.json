@@ -4,13 +4,14 @@
   "compilerOptions": {
     "incremental": true,
     "noEmit": true,
-    "module": "ESNext",
+    "module": "esnext",
     "strict": true,
     "lib": ["esnext"],
     "esModuleInterop": true,
     "skipLibCheck": true,
     "allowImportingTsExtensions": true,
-    "moduleResolution": "bundler",
-    "types": ["node"]
+    "moduleResolution": "node",
+    "types": ["node"],
+    "outDir": "dist"
   }
 }

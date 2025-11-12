@@ -6,9 +6,13 @@ import type { Job } from "./types";
 //THIS 2 ARE DUMB IMPORTS CAUSE FUCK TS AND NODE
 import { fileURLToPath } from "url";
 import path from "path";
+
+import { WorkerPool } from "./worker_pool.ts";
 //THIS 2 IS A SHIT LINE BECAUSE FUCK TS AND NODE
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const workerPool = new WorkerPool(path.resolve(__dirname, "worker.ts"), 3);
 
 const app = express();
 const port = 3000;
@@ -37,16 +41,16 @@ async function runWorker() {
   });
 }
 
-setInterval(() => {
-  console.log("queue state: ", jobQueue.length);
-  if (jobQueue.length > 0) {
-    for (let i = 0; i < 5; i++) {
-      (async () => {
-        await runWorker();
-      })();
-    }
-  }
-}, 2000);
+// setInterval(() => {
+//   console.log("queue state: ", jobQueue.length);
+//   if (jobQueue.length > 0) {
+//     for (let i = 0; i < 5; i++) {
+//       (async () => {
+//         await runWorker();
+//       })();
+//     }
+//   }
+// }, 2000);
 
 app.post("/jobs", (req: Request, res: Response) => {
   try {
@@ -76,8 +80,8 @@ app.post("/jobs", (req: Request, res: Response) => {
         createdAt: Date.now(),
       };
 
-      jobQueue.push(job);
-      addedJobs.push(id);
+      workerPool.addJob(job);
+      addedJobs.push(job.jobId);
     }
 
     // console.log(jobQueue);

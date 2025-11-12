@@ -10,12 +10,14 @@ function logEvent(event: string, jobId?: string) {
   );
 }
 
-async function doJob(job: Job): Promise<string> {
+// async function doJob(job: Job): Promise<string> {
+parentPort?.on("message", async (job: Job) => {
   logEvent(`job recieved: ${job.jobId}`);
 
   if (!job) {
     logEvent("no job found");
-    return "couldn't find a job";
+    parentPort?.postMessage("couldn't find a job");
+    return;
   }
 
   job.jobStatus = "processing";
@@ -25,10 +27,10 @@ async function doJob(job: Job): Promise<string> {
 
   job.jobStatus = "done";
   logEvent("job status: done", job.jobId);
-  return "job well done";
-}
+  parentPort?.postMessage("job well done");
+});
 
-(async () => {
-  const result = await doJob(workerData.job);
-  parentPort?.postMessage(result);
-})();
+// (async () => {
+//   const result = await doJob(workerData.job);
+//   parentPort?.postMessage(result);
+// })();
