@@ -6,6 +6,15 @@ import type { Job } from "./types";
 //THIS 2 ARE DUMB IMPORTS CAUSE FUCK TS AND NODE
 import { fileURLToPath } from "url";
 import path from "path";
+import { Pool } from "pg";
+
+export const pool = new Pool({
+  host: "localhost",
+  port: 5432,
+  user: "jobqueue",
+  password: "jobqueuepass",
+  database: "jobqueue",
+});
 
 import { WorkerPool } from "./worker_pool.ts";
 //THIS 2 IS A SHIT LINE BECAUSE FUCK TS AND NODE
@@ -19,40 +28,7 @@ const port = 3000;
 
 app.use(express.json());
 
-const jobQueue: Job[] = [];
-
-async function runWorker() {
-  return new Promise((resolve, reject) => {
-    const worker = new Worker(path.resolve(__dirname, "worker.ts"), {
-      workerData: {
-        job: jobQueue.pop(),
-      },
-    });
-
-    worker.on("message", resolve);
-    worker.on("error", reject);
-    worker.on("exit", (code) => {
-      if (code !== 0)
-        reject(new Error(`Worker stopped with exit code ${code}`));
-      console.log(
-        `[${new Date().toISOString()}] Worker exited with code ${code}`
-      );
-    });
-  });
-}
-
-// setInterval(() => {
-//   console.log("queue state: ", jobQueue.length);
-//   if (jobQueue.length > 0) {
-//     for (let i = 0; i < 5; i++) {
-//       (async () => {
-//         await runWorker();
-//       })();
-//     }
-//   }
-// }, 2000);
-
-app.post("/jobs", (req: Request, res: Response) => {
+app.post("/jobs", async (req: Request, res: Response) => {
   try {
     const jobs = Array.isArray(req.body) ? req.body : [req.body];
     const addedJobs: string[] = [];
@@ -80,7 +56,7 @@ app.post("/jobs", (req: Request, res: Response) => {
         createdAt: Date.now(),
       };
 
-      workerPool.addJob(job);
+      await workerPool.addJob(job);
       addedJobs.push(job.jobId);
     }
 
@@ -92,16 +68,18 @@ app.post("/jobs", (req: Request, res: Response) => {
   }
 });
 
-app.get("/jobs/:id", (req: Request, res: Response) => {
+app.get("/jobs/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    let job: Job;
+    let { rows } = await pool.query(
+      `SELECT job_status FROM jobs WHERE job_id = $1`,
+      [id]
+    );
 
-    for (let i = 0; i < jobQueue.length; i++) {
-      if (jobQueue[i].jobId === id) {
-        job = jobQueue[i];
-        return res.json(job.jobStatus);
-      }
+    if (rows.length) {
+      return res.json(rows[0].job_status);
+    } else {
+      return res.status(404).json({ message: "not found" });
     }
   } catch (err) {
     console.log("error", err);
