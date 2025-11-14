@@ -29,7 +29,8 @@ export class WorkerPool {
       this.idleWorkers.push(worker);
 
       worker.on("message", async (result) => {
-        const jobId = this.workerJobMap.get(worker);
+        const jobId = result.job_id ?? result.jobId;
+        const status = result.status;
         // const jobId = result.job_id;
         console.log(
           `[WorkerPool] Worker ${
@@ -37,9 +38,16 @@ export class WorkerPool {
           } finished job, result: ${JSON.stringify(result)}`
         );
 
-        if (jobId) {
+        if (jobId && status === "done") {
           await pool.query(
             `UPDATE jobs SET job_status = 'done' WHERE job_id = $1`,
+            [jobId]
+          );
+        }
+
+        if (jobId && status === "failed") {
+          await pool.query(
+            `UPDATE jobs SET job_status = 'failed' WHERE job_id = $1`,
             [jobId]
           );
         }
@@ -58,6 +66,7 @@ export class WorkerPool {
 
     setInterval(() => {
       this.assignJobs();
+      this.retryJobs();
     }, 3000);
   }
 
@@ -93,6 +102,41 @@ export class WorkerPool {
         const job = rows[0];
         await client.query(
           `UPDATE jobs SET job_status = 'processing' WHERE job_id = $1`,
+          [job.job_id]
+        );
+        const worker = this.idleWorkers.shift();
+        this.workerJobMap.set(worker!, job.job_id);
+        console.log(
+          `[WorkerPool] Assigning job ${job?.job_id} to worker ${worker?.threadId}`
+        );
+        worker?.postMessage(job);
+        await client.query("COMMIT");
+      } catch (err) {
+        await client.query("ROLLBACK");
+        client.release();
+        throw err;
+      } finally {
+        client.release();
+      }
+    }
+  }
+
+  private async retryJobs() {
+    while (this.idleWorkers.length > 0) {
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        const { rows } = await client.query(
+          `SELECT * FROM jobs WHERE job_status = 'failed' ORDER BY created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED`
+        );
+
+        if (rows.length === 0) {
+          console.log("NO FAILED JOBS");
+          break;
+        }
+        const job = rows[0];
+        await client.query(
+          `UPDATE jobs SET job_status = 'retrying' WHERE job_id = $1`,
           [job.job_id]
         );
         const worker = this.idleWorkers.shift();
