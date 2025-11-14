@@ -12,7 +12,8 @@ function logEvent(event: string, jobId?: string) {
 
 // async function doJob(job: Job): Promise<string> {
 parentPort?.on("message", async (job: Job) => {
-  logEvent(`job recieved: ${job.jobId}`);
+  const id = job.job_id ?? job.jobId;
+  logEvent(`job recieved: ${id}`);
 
   if (!job) {
     logEvent("no job found");
@@ -20,15 +21,21 @@ parentPort?.on("message", async (job: Job) => {
     return;
   }
 
-  logEvent("job status: processing", job.jobId);
+  logEvent("job status: processing", job.job_id);
 
   await delay(Math.random() * 20000);
 
-  logEvent("job status: done", job.jobId);
-  parentPort?.postMessage("job well done");
+  //   if (Math.random() < 0.3) {
+  //     logEvent("job status: done", job.job_id);
+  //     parentPort?.postMessage("job well done");
+  //   } else {
+  logEvent("job status: done", job.job_id);
+  parentPort?.postMessage({ job_id: job.job_id, status: "done" });
+  //   }
 });
 
 // (async () => {
 //   const result = await doJob(workerData.job);
 //   parentPort?.postMessage(result);
 // })();
+// add retry logic

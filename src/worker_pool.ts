@@ -30,8 +30,11 @@ export class WorkerPool {
 
       worker.on("message", async (result) => {
         const jobId = this.workerJobMap.get(worker);
+        // const jobId = result.job_id;
         console.log(
-          `[WorkerPool] Worker ${worker.threadId} finished job, result: ${result}`
+          `[WorkerPool] Worker ${
+            worker.threadId
+          } finished job, result: ${JSON.stringify(result)}`
         );
 
         if (jobId) {
