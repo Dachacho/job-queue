@@ -5,5 +5,8 @@ export interface Job {
   jobType: string;
   jobData: string;
   jobPriority: number;
+  retryCount: number;
   createdAt: number;
 }
+
+export const MAX_RETRY = 3;

@@ -1,7 +1,6 @@
 import express from "express";
 import type { Request, Response } from "express";
 import { randomUUID } from "crypto";
-import { Worker } from "worker_threads";
 import type { Job } from "./types";
 //THIS 2 ARE DUMB IMPORTS CAUSE FUCK TS AND NODE
 import { fileURLToPath } from "url";
@@ -53,6 +52,7 @@ app.post("/jobs", async (req: Request, res: Response) => {
         jobType: type,
         jobData: data,
         jobPriority: defaultPriority,
+        retryCount: 0,
         createdAt: Date.now(),
       };
 

@@ -24,7 +24,7 @@ parentPort?.on("message", async (job: Job) => {
 
   await delay(Math.random() * 20000);
 
-  if (Math.random() < 0.3) {
+  if (Math.random() < 0.6) {
     logEvent("job status: failed", job.job_id);
     parentPort?.postMessage({ job_id: job.job_id, status: "failed" });
   } else {

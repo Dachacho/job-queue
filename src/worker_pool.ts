@@ -1,5 +1,5 @@
 import { Worker } from "node:worker_threads";
-import type { Job } from "./types.ts";
+import { MAX_RETRY, type Job } from "./types.ts";
 import { pool } from "./index.ts";
 
 export class WorkerPool {
@@ -126,17 +126,38 @@ export class WorkerPool {
       const client = await pool.connect();
       try {
         await client.query("BEGIN");
+
+        const { rows: unretriable } = await client.query(
+          `SELECT * FROM jobs WHERE job_status = 'failed' AND retry_count > $1`,
+          [MAX_RETRY]
+        );
+
+        if (unretriable.length > 0) {
+          unretriable.forEach((job) => {
+            console.log(
+              `[WorkerPool] Job ${job.job_id} exceeded max retries and will not be retried`
+            );
+          });
+
+          await client.query(
+            `DELETE FROM jobs WHERE job_status = 'failed' and retry_count > $1`,
+            [MAX_RETRY]
+          );
+        }
+
         const { rows } = await client.query(
-          `SELECT * FROM jobs WHERE job_status = 'failed' ORDER BY created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED`
+          `SELECT * FROM jobs WHERE job_status = 'failed' AND retry_count <= $1 ORDER BY created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED`,
+          [MAX_RETRY]
         );
 
         if (rows.length === 0) {
-          console.log("NO FAILED JOBS");
+          console.log("NO RETRIABLE JOBS");
+          await client.query("COMMIT");
           break;
         }
         const job = rows[0];
         await client.query(
-          `UPDATE jobs SET job_status = 'retrying' WHERE job_id = $1`,
+          `UPDATE jobs SET job_status = 'retrying', retry_count = retry_count + 1 WHERE job_id = $1`,
           [job.job_id]
         );
         const worker = this.idleWorkers.shift();
@@ -148,7 +169,7 @@ export class WorkerPool {
         await client.query("COMMIT");
       } catch (err) {
         await client.query("ROLLBACK");
-        client.release();
+        // client.release();
         throw err;
       } finally {
         client.release();
