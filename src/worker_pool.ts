@@ -17,7 +17,7 @@ export class WorkerPool {
 
     pool
       .query(
-        `UPDATE jobs SET job_status = 'waiting' WHERE job_status = 'processing'`
+        `UPDATE jobs SET job_status = 'waiting' WHERE job_status = 'processing' OR job_status = 'failed' OR job_status = 'failed'`
       )
       .then(() => {
         console.log("Reset stuck jobs to waiting");
