@@ -1,3 +1,5 @@
+import { createClient } from "redis";
+
 export interface Job {
   jobId: string;
   job_id?: string; // for postgres
@@ -10,3 +12,5 @@ export interface Job {
 }
 
 export const MAX_RETRY = 3;
+
+export const redis = createClient();

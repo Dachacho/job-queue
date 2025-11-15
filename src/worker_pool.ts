@@ -1,5 +1,5 @@
 import { Worker } from "node:worker_threads";
-import { MAX_RETRY, type Job } from "./types.ts";
+import { redis, MAX_RETRY, type Job } from "./types.ts";
 import { pool } from "./index.ts";
 
 export class WorkerPool {
@@ -14,6 +14,15 @@ export class WorkerPool {
     this.workers = [];
     this.idleWorkers = [];
     this.workerJobMap = new Map<Worker, string>();
+
+    redis
+      .connect()
+      .then(() => {
+        console.log("redis connected");
+      })
+      .catch((err) => {
+        console.error("redis connection error: ", err);
+      });
 
     pool
       .query(
