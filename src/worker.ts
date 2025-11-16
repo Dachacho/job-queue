@@ -22,7 +22,12 @@ parentPort?.on("message", async (job: Job) => {
 
   logEvent("job status: processing", id);
 
-  await delay(Math.random() * 20000);
+  //fake work
+  await delay(10);
+  if (job.jobData !== undefined) {
+    JSON.stringify(job.jobData);
+    JSON.parse(JSON.stringify(job.jobData));
+  }
 
   if (Math.random() < 0.6) {
     logEvent("job status: failed", id);

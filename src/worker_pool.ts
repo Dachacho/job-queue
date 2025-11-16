@@ -8,7 +8,7 @@ export class WorkerPool {
   private workers: Worker[];
   private idleWorkers: Worker[];
   private workerJobMap: Map<Worker, string>;
-  constructor(workerPath: string, poolSize = 3) {
+  constructor(workerPath: string, poolSize = 12) {
     this.workerPath = workerPath;
     this.poolSize = poolSize;
     this.workers = [];
@@ -17,51 +17,7 @@ export class WorkerPool {
 
     for (let i = 0; i < this.poolSize; i++) {
       const worker = new Worker(this.workerPath);
-      this.workers.push(worker);
-      this.idleWorkers.push(worker);
-
-      worker.on("message", async (result) => {
-        const jobId = result.job_id ?? result.jobId;
-        const status = result.status;
-        // const jobId = result.job_id;
-        console.log(
-          `[WorkerPool] Worker ${
-            worker.threadId
-          } finished job, result: ${JSON.stringify(result)}`
-        );
-
-        if (jobId && status === "done") {
-          const res = await pool.query(
-            `UPDATE jobs SET job_status = 'done' WHERE job_id = $1`,
-            [jobId]
-          );
-
-          console.log(
-            `[WorkerPool] Updated to done: rowCount=${res.rowCount} for job_id=${jobId}`
-          );
-        }
-
-        if (jobId && status === "failed") {
-          const res = await pool.query(
-            `UPDATE jobs SET job_status = 'failed' WHERE job_id = $1`,
-            [jobId]
-          );
-
-          console.log(
-            `[WorkerPool] Updated to failed: rowCount=${res.rowCount} for job_id=${jobId}`
-          );
-        }
-        this.workerJobMap.delete(worker);
-
-        this.idleWorkers.push(worker);
-        this.assignJobs();
-      });
-
-      worker.on("error", (err) => {
-        console.error(`[Worker ${worker.threadId}] Error:`, err);
-      });
-
-      worker.on("exit", () => {});
+      this.setupWorker(worker);
     }
   }
 
@@ -201,5 +157,84 @@ export class WorkerPool {
 
     void this.assignJobs();
     void this.retryJobs();
+  }
+
+  private setupWorker(worker: Worker) {
+    this.workers.push(worker);
+    this.idleWorkers.push(worker);
+
+    worker.on("message", async (result) => {
+      const jobId = result.job_id ?? result.jobId;
+      const status = result.status;
+      // const jobId = result.job_id;
+      console.log(
+        `[WorkerPool] Worker ${
+          worker.threadId
+        } finished job, result: ${JSON.stringify(result)}`
+      );
+
+      if (jobId && status === "done") {
+        const res = await pool.query(
+          `UPDATE jobs SET job_status = 'done' WHERE job_id = $1`,
+          [jobId]
+        );
+
+        console.log(
+          `[WorkerPool] Updated to done: rowCount=${res.rowCount} for job_id=${jobId}`
+        );
+      }
+
+      if (jobId && status === "failed") {
+        const res = await pool.query(
+          `UPDATE jobs SET job_status = 'failed' WHERE job_id = $1`,
+          [jobId]
+        );
+
+        console.log(
+          `[WorkerPool] Updated to failed: rowCount=${res.rowCount} for job_id=${jobId}`
+        );
+      }
+      this.workerJobMap.delete(worker);
+
+      this.idleWorkers.push(worker);
+    });
+
+    worker.on("error", async (err) => {
+      console.error(`[Worker ${worker.threadId}] Error:`, err);
+      const jobId = this.workerJobMap.get(worker);
+      if (jobId) {
+        await pool.query(
+          `UPDATE jobs SET job_status = 'failed' WHERE job_id = $1`,
+          [jobId]
+        );
+        this.workerJobMap.delete(worker);
+      }
+      this.removeWorker(worker);
+      this.restartWorker();
+    });
+
+    worker.on("exit", async (code) => {
+      console.error(`[Worker ${worker.threadId}] exited with code ${code}`);
+      const jobId = this.workerJobMap.get(worker);
+      if (jobId) {
+        await pool.query(
+          `UPDATE jobs SET job_status = 'failed' WHERE job_id = $1`,
+          [jobId]
+        );
+        this.workerJobMap.delete(worker);
+      }
+      this.removeWorker(worker);
+      this.restartWorker();
+    });
+  }
+
+  private removeWorker(worker: Worker) {
+    this.workers = this.workers.filter((w) => w !== worker);
+    this.idleWorkers = this.idleWorkers.filter((w) => w !== worker);
+  }
+
+  private restartWorker() {
+    const newWorker = new Worker(this.workerPath);
+    this.setupWorker(newWorker);
   }
 }
