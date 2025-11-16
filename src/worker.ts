@@ -29,11 +29,12 @@ parentPort?.on("message", async (job: Job) => {
     JSON.parse(JSON.stringify(job.jobData));
   }
 
-  if (Math.random() < 0.6) {
-    logEvent("job status: failed", id);
-    parentPort?.postMessage({ job_id: id, status: "failed" });
-  } else {
-    logEvent("job status: done", id);
-    parentPort?.postMessage({ job_id: id, status: "done" });
-  }
+  //commented out to check benchmarks
+  //   if (Math.random() < 0.6) {
+  //     logEvent("job status: failed", id);
+  //     parentPort?.postMessage({ job_id: id, status: "failed" });
+  //   } else {
+  logEvent("job status: done", id);
+  parentPort?.postMessage({ job_id: id, status: "done" });
+  //   }
 });

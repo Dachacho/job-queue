@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const JOB_COUNT = 100;
+const JOB_COUNT = 1000;
 const JOBS = Array.from({ length: JOB_COUNT }, (_, i) => ({
   type: "email",
   data: { to: `user${i}@example.com`, body: `Hello ${i}!` },

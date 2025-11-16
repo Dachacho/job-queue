@@ -24,7 +24,7 @@ import { WorkerPool } from "./worker_pool.ts";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const workerPool = new WorkerPool(path.resolve(__dirname, "worker.ts"), 3);
+const workerPool = new WorkerPool(path.resolve(__dirname, "worker.ts"), 8);
 await workerPool.initialize();
 
 const app = express();
