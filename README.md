@@ -21,7 +21,9 @@ jobs _(as an array could be one)_ get sent on `/jobs` endpoint, then it gets put
 - exponential retrying times
 - better load handling
 - better logging
-- _(stuff i don't remember but probably is going to be added if i do finish this project)_
+- endpoints for metrics/health
+- tests
+- _(stuff i cant't think of but probably is going to be added if i do finish this project)_
 
 ---
 
