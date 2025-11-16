@@ -67,7 +67,7 @@ export class WorkerPool {
 
   async addJob(job: Job) {
     console.log(`[WorkerPool] Queuing job: ${job.jobId ?? job.job_id}`);
-    await redis.lPush("job_queue", JSON.stringify(job));
+
     await pool.query(
       `INSERT INTO jobs (job_id, job_status, job_type, job_data, job_priority, created_at)
      VALUES ($1, $2, $3, $4, $5, $6)`,
@@ -80,6 +80,8 @@ export class WorkerPool {
         job.createdAt,
       ]
     );
+
+    await redis.lPush("job_queue", JSON.stringify(job));
   }
 
   private async assignJobs() {
