@@ -13,6 +13,10 @@ export const pool = new Pool({
   user: "jobqueue",
   password: "jobqueuepass",
   database: "jobqueue",
+  max: 20,
+  connectionTimeoutMillis: 2000,
+  idleTimeoutMillis: 10000,
+  application_name: "job-queue",
 });
 
 import { WorkerPool } from "./worker_pool.ts";

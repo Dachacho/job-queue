@@ -44,11 +44,11 @@ export class WorkerPool {
     while (true) {
       if (this.idleWorkers.length === 0) {
         // to prevent busy looping (100 milliseconds to save some cpu) waiting for worker to become idle
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 10));
         continue;
       }
 
-      const result = await redis.blPop(["job_queue", "retry_queue"], 1);
+      const result = await redis.blPop(["job_queue", "retry_queue"], 0.1);
       if (!result) {
         console.log("NO WORK FOUND");
         continue;
@@ -76,7 +76,7 @@ export class WorkerPool {
     while (true) {
       if (this.idleWorkers.length === 0) {
         //same cpu saving here
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 10));
         continue;
       }
       const client = await pool.connect();
