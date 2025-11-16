@@ -21,6 +21,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const workerPool = new WorkerPool(path.resolve(__dirname, "worker.ts"), 3);
+await workerPool.initialize();
 
 const app = express();
 const port = 3000;

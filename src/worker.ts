@@ -20,15 +20,15 @@ parentPort?.on("message", async (job: Job) => {
     return;
   }
 
-  logEvent("job status: processing", job.job_id);
+  logEvent("job status: processing", id);
 
   await delay(Math.random() * 20000);
 
   if (Math.random() < 0.6) {
-    logEvent("job status: failed", job.job_id);
-    parentPort?.postMessage({ job_id: job.job_id, status: "failed" });
+    logEvent("job status: failed", id);
+    parentPort?.postMessage({ job_id: id, status: "failed" });
   } else {
-    logEvent("job status: done", job.job_id);
-    parentPort?.postMessage({ job_id: job.job_id, status: "done" });
+    logEvent("job status: done", id);
+    parentPort?.postMessage({ job_id: id, status: "done" });
   }
 });
