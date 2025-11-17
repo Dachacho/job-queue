@@ -1,4 +1,5 @@
 import { createClient } from "redis";
+import pino from "pino";
 
 export interface Job {
   jobId: string;
@@ -14,3 +15,5 @@ export interface Job {
 export const MAX_RETRY = 3;
 
 export const redis = createClient();
+
+export const logger = pino({ level: "info" });

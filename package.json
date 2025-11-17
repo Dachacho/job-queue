@@ -21,6 +21,7 @@
     "axios": "^1.13.2",
     "express": "^5.1.0",
     "pg": "^8.16.3",
+    "pino": "^10.1.0",
     "redis": "^5.9.0"
   },
   "devDependencies": {

@@ -1,18 +1,18 @@
 import { parentPort, workerData, threadId } from "worker_threads";
-import type { Job } from "./types";
+import { logger, type Job } from "./types.ts";
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function logEvent(event: string, jobId?: string) {
   const time = new Date().toISOString();
-  console.log(
+  logger.info(
     `[${time}] [Thread ${threadId}] [Job ${jobId ?? "none"}] ${event}`
   );
 }
 
 parentPort?.on("message", async (job: Job) => {
   const id = job.job_id ?? job.jobId;
-  logEvent(`job recieved: ${id}`);
+  //   logEvent(`job recieved: ${id}`);
 
   if (!job) {
     logEvent("no job found");
@@ -34,7 +34,7 @@ parentPort?.on("message", async (job: Job) => {
   //     logEvent("job status: failed", id);
   //     parentPort?.postMessage({ job_id: id, status: "failed" });
   //   } else {
-  logEvent("job status: done", id);
+  //   logEvent("job status: done", id);
   parentPort?.postMessage({ job_id: id, status: "done" });
   //   }
 });

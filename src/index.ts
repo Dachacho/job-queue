@@ -13,7 +13,7 @@ export const pool = new Pool({
   user: "jobqueue",
   password: "jobqueuepass",
   database: "jobqueue",
-  max: 20,
+  max: 8,
   connectionTimeoutMillis: 2000,
   idleTimeoutMillis: 10000,
   application_name: "job-queue",
@@ -30,7 +30,7 @@ await workerPool.initialize();
 const app = express();
 const port = 3000;
 
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 
 app.post("/jobs", async (req: Request, res: Response) => {
   try {

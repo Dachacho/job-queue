@@ -1,5 +1,5 @@
 import { Worker } from "node:worker_threads";
-import { redis, MAX_RETRY, type Job } from "./types.ts";
+import { redis, MAX_RETRY, type Job, logger } from "./types.ts";
 import { pool } from "./index.ts";
 
 export class WorkerPool {
@@ -22,7 +22,7 @@ export class WorkerPool {
   }
 
   async addJob(job: Job) {
-    console.log(`[WorkerPool] Queuing job: ${job.jobId ?? job.job_id}`);
+    logger.info(`[WorkerPool] Queuing job: ${job.jobId ?? job.job_id}`);
 
     await pool.query(
       `INSERT INTO jobs (job_id, job_status, job_type, job_data, job_priority, created_at)
@@ -50,7 +50,7 @@ export class WorkerPool {
 
       const result = await redis.blPop(["job_queue", "retry_queue"], 0.1);
       if (!result) {
-        console.log("NO WORK FOUND");
+        logger.info("NO WORK FOUND");
         continue;
       }
 
@@ -65,7 +65,7 @@ export class WorkerPool {
 
       const worker = this.idleWorkers.shift();
       this.workerJobMap.set(worker!, job.jobId ?? job.job_id);
-      console.log(
+      logger.info(
         `[WorkerPool] Assigning job ${job.jobId} to worker ${worker?.threadId}`
       );
       worker?.postMessage(job);
@@ -89,7 +89,7 @@ export class WorkerPool {
         );
         if (unretriable.length > 0) {
           unretriable.forEach((job) => {
-            console.log(
+            logger.info(
               `[WorkerPool] Job ${job.job_id} exceeded max retries and will not be retried`
             );
           });
@@ -104,7 +104,7 @@ export class WorkerPool {
           [MAX_RETRY]
         );
         if (rows.length === 0) {
-          console.log("NO RETRIABLE JOBS");
+          logger.info("NO RETRIABLE JOBS");
           await client.query("COMMIT");
           await new Promise((resolve) => setTimeout(resolve, 1000)); // sleep before next retry check
           continue;
@@ -118,7 +118,7 @@ export class WorkerPool {
 
         await redis.lPush("retry_queue", JSON.stringify(job));
         await client.query("COMMIT");
-        console.log(`[WorkerPool] Retrying job ${job.job_id}`);
+        logger.info(`[WorkerPool] Retrying job ${job.job_id}`);
       } catch (err) {
         await client.query("ROLLBACK");
         // client.release();
@@ -133,10 +133,10 @@ export class WorkerPool {
     redis
       .connect()
       .then(() => {
-        console.log("redis connected");
+        logger.info("redis connected");
       })
       .catch((err) => {
-        console.error("redis connection error: ", err);
+        logger.error("redis connection error: ", err);
       });
 
     await pool.query(
@@ -151,7 +151,7 @@ export class WorkerPool {
     for (const job of waitingJobs) {
       await redis.lPush("job_queue", JSON.stringify(job));
     }
-    console.log(
+    logger.info(
       `Reset stuck jobs to waiting and re-queued ${waitingJobs.length} jobs`
     );
 
@@ -167,32 +167,32 @@ export class WorkerPool {
       const jobId = result.job_id ?? result.jobId;
       const status = result.status;
       // const jobId = result.job_id;
-      console.log(
+      logger.info(
         `[WorkerPool] Worker ${
           worker.threadId
         } finished job, result: ${JSON.stringify(result)}`
       );
 
       if (jobId && status === "done") {
-        const res = await pool.query(
+        await pool.query(
           `UPDATE jobs SET job_status = 'done' WHERE job_id = $1`,
           [jobId]
         );
 
-        console.log(
-          `[WorkerPool] Updated to done: rowCount=${res.rowCount} for job_id=${jobId}`
-        );
+        // console.log(
+        //   `[WorkerPool] Updated to done: rowCount=${res.rowCount} for job_id=${jobId}`
+        // );
       }
 
       if (jobId && status === "failed") {
-        const res = await pool.query(
+        await pool.query(
           `UPDATE jobs SET job_status = 'failed' WHERE job_id = $1`,
           [jobId]
         );
 
-        console.log(
-          `[WorkerPool] Updated to failed: rowCount=${res.rowCount} for job_id=${jobId}`
-        );
+        // console.log(
+        //   `[WorkerPool] Updated to failed: rowCount=${res.rowCount} for job_id=${jobId}`
+        // );
       }
       this.workerJobMap.delete(worker);
 
@@ -200,7 +200,11 @@ export class WorkerPool {
     });
 
     worker.on("error", async (err) => {
-      console.error(`[Worker ${worker.threadId}] Error:`, err);
+      logger.error(
+        `[Worker ${worker.threadId}] Error: ${
+          err?.stack ?? err?.message ?? String(err)
+        }`
+      );
       const jobId = this.workerJobMap.get(worker);
       if (jobId) {
         await pool.query(
@@ -214,7 +218,7 @@ export class WorkerPool {
     });
 
     worker.on("exit", async (code) => {
-      console.error(`[Worker ${worker.threadId}] exited with code ${code}`);
+      logger.error(`[Worker ${worker.threadId}] exited with code ${code}`);
       const jobId = this.workerJobMap.get(worker);
       if (jobId) {
         await pool.query(
